@@ -26,7 +26,7 @@ export type CarouselProps = {
   arrowLeft?: ReactNode;
   arrowRight?: ReactNode;
   containerClassName?: string;
-  containerStyle?: string;
+  containerStyle?: CSSProperties;
   onPageChanged?: (page: number) => void;
   onTotalPagesChanged?: (page: number) => void;
   startPage?: number;
