@@ -20,6 +20,9 @@ export declare type CarouselProps = {
 } & Pick<DotProps, 'dot' | 'dotColorActive' | 'dotColorInactive'>;
 declare function Carousel({ cols: colsProp, rows: rowsProp, gap: gapProp, loop: loopProp, scrollable, scrollSnap, hideArrow, arrowLeft, arrowRight, containerClassName, containerStyle, children, startPage, onPageChanged, onTotalPagesChanged, showDots, dotColorActive, dotColorInactive, }: CarouselProps): JSX.Element;
 declare namespace Carousel {
-    var Item: FC<{}>;
+    var Item: FC<{
+      key?: any;
+      children: ReactNode;
+    }>;
 }
 export default Carousel;
