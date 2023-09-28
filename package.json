@@ -1,6 +1,6 @@
 {
   "name": "react-grid-carousel",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "React resposive carousel component w/ grid layout",
   "homepage": "https://react-grid-carousel.now.sh/",
   "keywords": [
@@ -18,7 +18,7 @@
     "react-grid"
   ],
   "repository": {
-    "url": "git@github.com:x3388638/react-grid-carousel.git",
+    "url": "BalcaoLegal/react-grid-carousel.git",
     "type": "git"
   },
   "main": "dist/bundle.js",
@@ -38,12 +38,12 @@
   "license": "MIT",
   "dependencies": {
     "lodash.debounce": "^4.0.8",
-    "prop-types": "^15.7.2",
+    "prop-types": "^15.8.1",
     "smoothscroll-polyfill": "^0.4.4",
-    "styled-components": "^4.4.1"
+    "styled-components": "^5.3.6"
   },
   "devDependencies": {
-    "@babel/core": "^7.8.3",
+    "@babel/core": "^7.20.5",
     "@babel/preset-env": "^7.8.3",
     "@babel/preset-react": "^7.8.3",
     "@storybook/addon-actions": "^5.3.8",
@@ -61,8 +61,8 @@
     "husky": "^4.0.10",
     "lint-staged": "^10.0.1",
     "prettier": "^1.19.1",
-    "react": "^16.12.0",
-    "react-dom": "^16.12.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "rollup": "^1.29.1",
     "rollup-plugin-babel": "^4.3.3",
     "stylelint": "^13.2.0",
@@ -75,8 +75,8 @@
     "webpack-dev-server": "^3.10.1"
   },
   "peerDependencies": {
-    "react": "^16.12.0",
-    "react-dom": "^16.12.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "lint-staged": {
     "*.{js,json,css}": [
