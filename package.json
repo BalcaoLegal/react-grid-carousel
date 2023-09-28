@@ -72,5 +72,5 @@
     "*.{ts,tsx,js,jsx,json,css}": [
       "npm run prettier"
     ]
-  },
+  }
 }
