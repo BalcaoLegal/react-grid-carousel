@@ -1,21 +1,24 @@
-import babel from 'rollup-plugin-babel'
-import pkg from './package.json'
+import babel from 'rollup-plugin-babel';
+import typescript from '@rollup/plugin-typescript';
+import pkg from './package.json';
+import generateDeclarations from 'rollup-plugin-generate-declarations';
 
 export default [
   {
-    input: 'src/app.js',
+    input: 'src/app.ts',
     plugins: [
       babel({
-        exclude: 'node_modules/**'
-      })
+        exclude: 'node_modules/**',
+      }),
+      typescript(),
+      generateDeclarations(),
     ],
-    output: {
-      file: pkg.main,
-      format: 'cjs'
-    },
-    external: [
-      ...Object.keys(pkg.dependencies),
-      ...Object.keys(pkg.peerDependencies)
-    ]
-  }
-]
+    output: [
+      {
+        file: pkg.main,
+        format: 'cjs',
+      },
+    ],
+    external: Object.keys(pkg.dependencies),
+  },
+];
