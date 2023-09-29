@@ -76,7 +76,7 @@ const Rail = styled.div<Pick<CarouselProps, 'gap' | 'rows' | 'cols' | 'mobileBre
     padding-left: ${({ gap }) => `${gap}px`};
     grid-template-columns: ${({ page }) => `repeat(${page}, 90%)`};
     grid-column-gap: ${({ cols, rows, gap }) =>
-      `calc(${((cols ?? 2) * (rows ?? 1) - 1) * 90}% + ${(cols ?? 2) * (rows ?? 1) * (gap ?? 5)}px)`};
+      `calc(${((cols ?? 1) * (rows ?? 1) - 1) * 90}% + ${(cols ?? 1) * (rows ?? 1) * (gap ?? 5)}px)`};
     transform: translateX(0);
   }
 `;
@@ -94,7 +94,7 @@ const ItemSet = styled.div<Pick<CarouselProps, 'gap' | 'rows' | 'cols' | 'mobile
   @media screen and (max-width: ${({ mobileBreakpoint }) =>
       mobileBreakpoint}px) {
     grid-template-columns: ${({ cols, rows }) =>
-      `repeat(${(cols ?? 2) * (rows ?? 1)}, 100%)`};
+      `repeat(${(cols ?? 1) * (rows ?? 1)}, 100%)`};
     grid-template-rows: 1fr;
 
     &:last-of-type > ${/* sc-sel */ Item}:last-of-type {
