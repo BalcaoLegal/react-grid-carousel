@@ -1,4 +1,4 @@
-import babel from 'rollup-plugin-babel';
+import babel from '@rollup/plugin-babel';
 import typescript from '@rollup/plugin-typescript';
 import pkg from './package.json';
 import generateDeclarations from 'rollup-plugin-generate-declarations';

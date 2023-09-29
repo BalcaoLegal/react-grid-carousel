@@ -1,5 +1,5 @@
 import React, { FunctionComponent } from 'react';
-declare type CustomDotProps = {
+type CustomDotProps = {
     isActive?: boolean;
 };
 export interface DotProps {
