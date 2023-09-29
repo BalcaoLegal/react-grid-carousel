@@ -1,10 +1,20 @@
-import {FC, ReactNode, HTMLAttributes} from 'react';
+import React, {ReactNode, HTMLAttributes, MouseEventHandler} from 'react';
 import styled from 'styled-components';
 
 export type ArrowButtonProps = HTMLAttributes<HTMLDivElement> & {
   type?: 'prev' | 'next';
-  CustomBtn?: ReactNode;
+  CustomBtn?: ReactNode | React.ComponentClass<any>;
+  mobileBreakpoint: number;
+  onClick: MouseEventHandler<HTMLDivElement>;
+  hidden?: boolean;
 };
+
+const ButtonWrapper = styled.div<Pick<ArrowButtonProps, 'mobileBreakpoint'>>`
+  @media screen and (max-width: ${({ mobileBreakpoint }) =>
+      mobileBreakpoint}px) {
+    display: none;
+  }
+`
 
 const Button = styled.span<Pick<ArrowButtonProps, 'type'>>`
   position: absolute;
@@ -42,10 +52,33 @@ const Button = styled.span<Pick<ArrowButtonProps, 'type'>>`
   }
 `;
 
-const ArrowButton: FC<ArrowButtonProps> = ({type, CustomBtn, ...props}) => (
-  <div {...props}>
-    {CustomBtn ? typeof CustomBtn === 'function' ? <CustomBtn /> : CustomBtn : <Button type={type} />}
-  </div>
-);
+const ArrowButton = ({
+  type,
+  mobileBreakpoint = 1,
+  hidden = false,
+  CustomBtn,
+  onClick
+}: ArrowButtonProps) => {
+  const renderButton = () => {
+    if (CustomBtn) {
+      if (typeof CustomBtn === 'function') {
+        return <CustomBtn />;
+      } else {
+        return CustomBtn;
+      }
+    } else {
+      return <Button type={type} />;
+    }
+  };
+  return (
+    <ButtonWrapper
+      mobileBreakpoint={mobileBreakpoint}
+      hidden={hidden}
+      onClick={onClick}
+    >
+      {renderButton()}
+    </ButtonWrapper>
+  );
+};
 
 export default ArrowButton;

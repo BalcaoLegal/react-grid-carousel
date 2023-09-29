@@ -14,6 +14,10 @@ import styled from 'styled-components';
 import useRefProp from '../hooks/useRefProp';
 import ArrowButton from './ArrowButton';
 import Dot, {DotProps} from './Dots';
+import useResponsiveLayout, { UseResponsiveLayoutProps } from '../hooks/responsiveLayoutHook';
+import { addResizeHandler, removeResizeHandler } from '../utils/resizeListener';
+
+
 
 export type CarouselProps = {
   cols?: number;
@@ -32,63 +36,89 @@ export type CarouselProps = {
   startPage?: number;
   children?: ReactNode;
   showDots?: boolean;
+  responsiveLayout?: UseResponsiveLayoutProps;
+  mobileBreakpoint?: number;
+  autoplay?: number;
 } & Pick<DotProps, 'dot' | 'dotColorActive' | 'dotColorInactive'>;
 
 const Container = styled.div`
   position: relative;
 `;
 
-const RailWrapper = styled.div<Pick<CarouselProps, 'scrollSnap' | 'scrollable' | 'gap' | 'showDots'>>`
+const RailWrapper = styled.div<Pick<CarouselProps, 'scrollSnap' | 'scrollable' | 'gap' | 'showDots' | 'mobileBreakpoint'>>`
   overflow: hidden;
-  ${({scrollable, scrollSnap, gap, showDots}) =>
-    `${
-      scrollable
-        ? `
-    gap: ${gap}px;
-    display: flex;
+  margin: ${({ showDots }) => (showDots ? '0 20px 15px 20px' : '0 20px')};
+
+  @media screen and (max-width: ${({ mobileBreakpoint }) =>
+      mobileBreakpoint}px) {
     overflow-x: auto;
-    scroll-snap-type: ${scrollSnap ? 'x mandatory' : ''};
+    margin: 0;
+    scroll-snap-type: ${({ scrollSnap }) => (scrollSnap ? 'x mandatory' : '')};
     scrollbar-width: none;
+
     &::-webkit-scrollbar {
       display: none;
     }
-  `
-        : ''
-    }
-    margin: ${showDots ? '0 0 20px' : 0};
-      `}
+  }
 `;
 
-const Rail = styled.div<Pick<CarouselProps, 'gap' | 'rows' | 'cols'> & {page: number; currentPage: number}>`
+const Rail = styled.div<Pick<CarouselProps, 'gap' | 'rows' | 'cols' | 'mobileBreakpoint'> & {page: number; currentPage: number}>`
   display: grid;
-  grid-column-gap: ${({gap}) => `${gap}px`};
+  grid-column-gap: ${({ gap }) => `${gap}px`};
   position: relative;
   transition: transform 0.5s cubic-bezier(0.2, 1, 0.3, 1) 0s;
-  grid-template-columns: ${({page}) => `repeat(${page}, 100%)`};
-  transform: ${({currentPage, gap}) => `translateX(calc(${-100 * currentPage}% - ${(gap as number) * currentPage}px))`};
-`;
+  grid-template-columns: ${({ page }) => `repeat(${page}, 100%)`};
+  transform: ${({ currentPage, gap }) =>
+    `translateX(calc(${-100 * currentPage}% - ${(gap ?? 10) * currentPage}px))`};
 
-const ItemSet = styled.div<Pick<CarouselProps, 'gap' | 'rows' | 'cols'>>`
-  display: grid;
-  grid-template-columns: ${({cols}) => `repeat(${cols}, 1fr)`};
-  grid-template-rows: ${({rows}) => `repeat(${rows}, 1fr)`};
-  grid-gap: ${({gap}) => `${gap}px`};
-`;
-
-const Dots = styled.div`
-  position: absolute;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  bottom: -20px;
-  height: 10px;
-  width: 100%;
-  line-height: 10px;
-  text-align: center;
+  @media screen and (max-width: ${({ mobileBreakpoint }) =>
+      mobileBreakpoint}px) {
+    padding-left: ${({ gap }) => `${gap}px`};
+    grid-template-columns: ${({ page }) => `repeat(${page}, 90%)`};
+    grid-column-gap: ${({ cols, rows, gap }) =>
+      `calc(${((cols ?? 1) * (rows ?? 1) - 1) * 90}% + ${(cols ?? 1) * (rows ?? 1) * (gap ?? 10)}px)`};
+    transform: translateX(0);
+  }
 `;
 
 const Item = styled.div<Pick<CarouselProps, 'scrollSnap'>>`
   scroll-snap-align: ${({scrollSnap}) => (scrollSnap ? 'start' : '')};
+`;
+
+const ItemSet = styled.div<Pick<CarouselProps, 'gap' | 'rows' | 'cols' | 'mobileBreakpoint'>>`
+  display: grid;
+  grid-template-columns: ${({ cols }) => `repeat(${cols}, 1fr)`};
+  grid-template-rows: ${({ rows }) => `repeat(${rows}, 1fr)`};
+  grid-gap: ${({ gap }) => `${gap}px`};
+
+  @media screen and (max-width: ${({ mobileBreakpoint }) =>
+      mobileBreakpoint}px) {
+    grid-template-columns: ${({ cols, rows }) =>
+      `repeat(${(cols ?? 1) * (rows ?? 1)}, 100%)`};
+    grid-template-rows: 1fr;
+
+    &:last-of-type > ${/* sc-sel */ Item}:last-of-type {
+      padding-right: ${({ gap }) => `${gap}px`};
+      margin-right: ${({ gap }) => `-${gap}px`};
+    }
+  }
+`;
+
+const Dots = styled.div<Pick<CarouselProps, 'mobileBreakpoint'>>`
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  bottom: -12px;
+  height: 10px;
+  width: 100%;
+  line-height: 10px;
+  text-align: center;
+
+  @media screen and (max-width: ${({ mobileBreakpoint }) =>
+      mobileBreakpoint}px) {
+    display: none;
+  }
 `;
 
 const CAROUSEL_ITEM = 'CAROUSEL_ITEM';
@@ -101,6 +131,7 @@ function Carousel({
   scrollable = false,
   scrollSnap = true,
   hideArrow = false,
+  autoplay: autoplayProp,
   arrowLeft,
   arrowRight,
   containerClassName,
@@ -112,28 +143,72 @@ function Carousel({
   showDots,
   dotColorActive = '#795548',
   dotColorInactive = '#ccc',
+  responsiveLayout,
+  mobileBreakpoint = 767,
 }: CarouselProps) {
   const [currentPage, setCurrentPage] = useState<number>(startPage);
+  const [isHover, setIsHover] = useState(false);
+  const [isTouch, setIsTouch] = useState(false);
   const [cols, setCols] = useState<number>(colsProp);
   const [rows, setRows] = useState<number>(rowsProp);
   const [gap, setGap] = useState<number>(0);
   const [loop, setLoop] = useState<boolean>(loopProp);
+  const [autoplay, setAutoplay] = useState(autoplayProp);
   const railWrapperRef = useRef<HTMLDivElement>(null);
+  const [railWrapperWidth, setRailWrapperWidth] = useState(0);
   const onPageChangedRef = useRefProp(onPageChanged);
   const onTotalPagesChangedRef = useRefProp(onTotalPagesChanged);
-
-  useEffect(() => {
-    setCols(colsProp);
-    setRows(rowsProp);
-    setGap(gapProp);
-    setLoop(loopProp);
-    setCurrentPage(0);
-  }, [colsProp, rowsProp, gapProp, loopProp]);
+  const breakpointSetting = useResponsiveLayout(responsiveLayout);
+  const randomKey = useMemo(() => `${Math.random()}-${Math.random()}`, []);
+  const [hasSetResizeHandler, setHasSetResizeHandler] = useState(false);
+  const autoplayIntervalRef: any = useRef(null);
 
   const itemList = useMemo(
     () => Children.toArray(children).filter((child) => (child as any)?.type?.displayName === CAROUSEL_ITEM),
     [children]
   );
+
+  const handleRailWrapperResize = useCallback(() => {
+    railWrapperRef.current && setRailWrapperWidth(railWrapperRef.current.offsetWidth);
+  }, [railWrapperRef]);
+
+  const setResizeHandler = useCallback(() => {
+    addResizeHandler(`gapCalculator-${randomKey}`, (handleRailWrapperResize as any));
+    setHasSetResizeHandler(true);
+  }, [randomKey, handleRailWrapperResize]);
+
+  const rmResizeHandler = useCallback(() => {
+    removeResizeHandler(`gapCalculator-${randomKey}`);
+    setHasSetResizeHandler(false);
+  }, [randomKey]);
+
+  const parseGap = useCallback(
+    (gap: number) => {
+      let parsed = gap
+      let shouldSetResizeHandler = false      
+
+      shouldSetResizeHandler && !hasSetResizeHandler && setResizeHandler()
+      !shouldSetResizeHandler && hasSetResizeHandler && rmResizeHandler()
+      return parsed
+    },
+    [
+      railWrapperWidth,
+      railWrapperRef,
+      hasSetResizeHandler,
+      setResizeHandler,
+      rmResizeHandler
+    ]
+  );
+
+  useEffect(() => {
+    const { cols, rows, gap, loop, autoplay } = breakpointSetting ?? {};
+    setCols(cols ?? colsProp);
+    setRows(rows ?? rowsProp);
+    setGap(parseGap(gap ?? gapProp));
+    setLoop(loop ??loopProp);
+    setAutoplay(autoplay ?? autoplayProp);
+    setCurrentPage(0);
+  }, [breakpointSetting, colsProp, rowsProp, gapProp, loopProp, parseGap]);
 
   const itemAmountPerSet = cols * rows;
   const itemSetList = useMemo(
@@ -192,53 +267,124 @@ function Carousel({
       if (loop && prevPage < 0) {
         return page - 1;
       }
-
       return prevPage;
     });
   }, [scrollable, loop, page]);
 
-  const handleNext = useCallback(() => {
-    if (scrollable) {
-      if (railWrapperRef.current) {
-        const left = railWrapperRef.current.scrollLeft;
-        const width = railWrapperRef.current.clientWidth;
-        const fullWidth = railWrapperRef.current.scrollWidth;
-        railWrapperRef.current.scrollTo({
-          left: Math.min(left + width, fullWidth - width),
-          behavior: 'smooth',
+  const handleNext = useCallback(
+    (isMobile = false) => {
+      const railWrapper = railWrapperRef.current;
+      if (isMobile && railWrapper) {
+        if (!scrollSnap) {
+          return;
+        }
+
+        const { scrollLeft, offsetWidth, scrollWidth } = railWrapper
+        railWrapper.scrollBy({
+          top: 0,
+          left:
+            loop && scrollLeft + offsetWidth >= scrollWidth
+              ? -scrollLeft
+              : scrollLeft === 0
+                ? gap +
+                  (offsetWidth - gap) * 0.9 -
+                  (offsetWidth * 0.1 - gap * 1.1) / 2
+                : (offsetWidth - gap) * 0.9 + gap,
+          behavior: 'smooth'
+        });
+      } else {
+        setCurrentPage(p => {
+          const nextPage = p + 1;
+          if (nextPage >= page) {
+            return loop ? 0 : p;
+          }
+          return nextPage;
         });
       }
-      return;
+    },
+    [loop, page, gap, railWrapperRef, scrollSnap]
+  );
+
+  const startAutoplayInterval = useCallback(() => {
+    if (autoplayIntervalRef.current === null) {
+      autoplayIntervalRef.current = setInterval(() => {
+        handleNext(window.innerWidth <= mobileBreakpoint);
+      }, autoplay);
     }
-    setCurrentPage((p) => {
-      const nextPage = p + 1;
-      if (nextPage >= page) {
-        return loop ? 0 : p;
+  }, [autoplay, autoplayIntervalRef, handleNext, mobileBreakpoint]);
+
+  useEffect(() => {
+    startAutoplayInterval();
+
+    return () => {
+      if (autoplayIntervalRef.current !== null) {
+        clearInterval(autoplayIntervalRef.current);
+        autoplayIntervalRef.current = null;
       }
+    }
+  }, [startAutoplayInterval, autoplayIntervalRef]);
 
-      return nextPage;
-    });
-  }, [scrollable, loop, page, gap]);
+  const handleHover = useCallback(() => {
+    setIsHover(hover => !hover)
+  }, [])
 
-  const turnToPage = useCallback((page) => {
+  const handleTouch = useCallback(() => {
+    setIsTouch(touch => !touch)
+  }, [])
+
+  useEffect(() => {
+    if (isHover || isTouch) {
+      clearInterval(autoplayIntervalRef.current)
+      autoplayIntervalRef.current = null
+    } else {
+      startAutoplayInterval()
+    }
+  }, [isHover, isTouch, autoplayIntervalRef, startAutoplayInterval])
+
+  const turnToPage = useCallback((page: number) => {
     setCurrentPage(page);
   }, []);
 
   return (
-    <Container className={containerClassName} style={containerStyle}>
+    <Container 
+      className={containerClassName} 
+      style={containerStyle}
+      onMouseEnter={handleHover}
+      onMouseLeave={handleHover}
+      onTouchStart={handleTouch}
+      onTouchEnd={handleTouch}
+      >
       <ArrowButton
-        type="prev"
-        hidden={!scrollable && (hideArrow || (!loop && currentPage <= 0))}
+        type="prev"        
+        mobileBreakpoint={mobileBreakpoint}
+        hidden={(hideArrow || (!loop && currentPage <= 0))}
         CustomBtn={arrowLeft}
         onClick={handlePrev}
       />
-      <RailWrapper showDots={showDots} gap={gap} scrollable={scrollable} scrollSnap={scrollSnap} ref={railWrapperRef}>
+      <RailWrapper 
+        showDots={showDots} 
+        mobileBreakpoint={mobileBreakpoint}
+        gap={gap} 
+        scrollable={scrollable} 
+        scrollSnap={scrollSnap} 
+        ref={railWrapperRef}>
         {scrollable ? (
           itemSetList.map((sets, i) => <Fragment key={i}>{sets}</Fragment>)
         ) : (
-          <Rail cols={cols} rows={rows} page={page} gap={gap} currentPage={currentPage}>
+          <Rail 
+            cols={cols} 
+            rows={rows} 
+            page={page} 
+            gap={gap} 
+            currentPage={currentPage}            
+            mobileBreakpoint={mobileBreakpoint}>
             {itemSetList.map((sets, i) => (
-              <ItemSet key={i} cols={cols} rows={rows} gap={gap}>
+              <ItemSet 
+                key={i} 
+                cols={cols} 
+                rows={rows} 
+                gap={gap}              
+                mobileBreakpoint={mobileBreakpoint}>
                 {sets}
               </ItemSet>
             ))}
@@ -246,7 +392,7 @@ function Carousel({
         )}
       </RailWrapper>
       {showDots && (
-        <Dots>
+        <Dots mobileBreakpoint={mobileBreakpoint}>
           {[...Array(page)].map((_, i) => (
             <Dot
               key={i}
@@ -261,9 +407,10 @@ function Carousel({
       )}
       <ArrowButton
         type="next"
-        hidden={!scrollable && (hideArrow || (!loop && currentPage === page - 1))}
+        mobileBreakpoint={mobileBreakpoint}
+        hidden={ (hideArrow || (!loop && currentPage === page - 1))}
         CustomBtn={arrowRight}
-        onClick={handleNext}
+        onClick={handleNext.bind(null, false)}
       />
     </Container>
   );
@@ -271,6 +418,9 @@ function Carousel({
 
 export default Carousel;
 
-const CarouselItem: FC = ({children}) => <>{children}</>;
+type CarouselItemProps = {
+  children: React.ReactNode;
+};
+const CarouselItem: FC<CarouselItemProps> = ({children}) => <>{children}</>;
 Carousel.Item = CarouselItem;
 Carousel.Item.displayName = CAROUSEL_ITEM;
