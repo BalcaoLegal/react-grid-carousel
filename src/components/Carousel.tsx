@@ -69,14 +69,14 @@ const Rail = styled.div<Pick<CarouselProps, 'gap' | 'rows' | 'cols' | 'mobileBre
   transition: transform 0.5s cubic-bezier(0.2, 1, 0.3, 1) 0s;
   grid-template-columns: ${({ page }) => `repeat(${page}, 100%)`};
   transform: ${({ currentPage, gap }) =>
-    `translateX(calc(${-100 * currentPage}% - ${(gap ?? 10) * currentPage}px))`};
+    `translateX(calc(${-100 * currentPage}% - ${(gap ?? 5) * currentPage}px))`};
 
   @media screen and (max-width: ${({ mobileBreakpoint }) =>
       mobileBreakpoint}px) {
     padding-left: ${({ gap }) => `${gap}px`};
     grid-template-columns: ${({ page }) => `repeat(${page}, 90%)`};
     grid-column-gap: ${({ cols, rows, gap }) =>
-      `calc(${((cols ?? 2) * (rows ?? 1) - 1) * 90}% + ${(cols ?? 2) * (rows ?? 1) * (gap ?? 10)}px)`};
+      `calc(${((cols ?? 2) * (rows ?? 1) - 1) * 90}% + ${(cols ?? 2) * (rows ?? 1) * (gap ?? 5)}px)`};
     transform: translateX(0);
   }
 `;
@@ -124,9 +124,9 @@ const Dots = styled.div<Pick<CarouselProps, 'mobileBreakpoint'>>`
 const CAROUSEL_ITEM = 'CAROUSEL_ITEM';
 
 function Carousel({
-  cols: colsProp = 1,
+  cols: colsProp = 2,
   rows: rowsProp = 1,
-  gap: gapProp = 10,
+  gap: gapProp = 5,
   loop: loopProp = false,
   scrollable = false,
   scrollSnap = true,
